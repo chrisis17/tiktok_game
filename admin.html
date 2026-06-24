@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚙️ Admin — Guerra de Países</title>
+<style>
+  :root { --bg:#0e1118; --panel:#1b2030; --panel2:#232a3d; --line:#333f5c; --txt:#e8ecf5; --muted:#9aa6c4; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:'Segoe UI',system-ui,sans-serif; padding:18px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:18px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .card h2 { margin:0 0 12px; font-size:16px; }
+  .card.full { grid-column:1/3; }
+
+  .fld { display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:6px 0; border-bottom:1px dashed var(--line); }
+  .fld span { font-size:14px; }
+  .fld input { width:90px; }
+  input { background:var(--panel2); border:1px solid var(--line); color:var(--txt);
+    border-radius:7px; padding:7px 9px; font-size:13px; }
+  input:focus { outline:1px solid #4a5a8c; }
+
+  .btnRow { display:flex; gap:8px; margin-top:12px; }
+  button { padding:9px 14px; border-radius:8px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--txt); font-weight:700; cursor:pointer; font-size:13px; }
+  button:hover { background:#34406a; }
+  button.primary { background:#2e9e5b; border-color:#2e9e5b; }
+  button.primary:hover { background:#37b86b; }
+  a.gamelink { color:#7fb0ff; text-decoration:none; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { padding:7px 8px; text-align:left; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--muted); font-weight:600; font-size:12px; position:sticky; top:0; background:var(--panel); }
+  td.ico { font-size:20px; }
+  td small { color:var(--muted); }
+  .tier { display:inline-block; width:24px; height:24px; line-height:24px; text-align:center;
+    border-radius:6px; font-weight:900; color:#000; }
+  .legend { color:var(--muted); font-size:12px; margin-top:10px; line-height:1.6; }
+
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(40px);
+    background:#2e9e5b; color:#fff; padding:12px 20px; border-radius:10px; font-weight:700;
+    opacity:0; transition:.3s; pointer-events:none; }
+  #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <h1>⚙️ Panel de Administrador — Guerra de Países</h1>
+  <div class="sub">Esta pestaña es <b>solo para ti</b> (no la transmitas). El juego está en
+    <a class="gamelink" href="index.html" target="_blank">index.html ↗</a> — los cambios aquí se aplican en la siguiente fase.</div>
+
+  <div class="grid">
+    <!-- Ajustes -->
+    <div class="card">
+      <h2>⏱ Ajustes del juego</h2>
+      <div id="settingsForm"></div>
+      <div class="btnRow">
+        <button class="primary" id="saveSettings">💾 Guardar ajustes</button>
+        <button id="resetSettings">↺ Restaurar</button>
+      </div>
+    </div>
+
+    <!-- Mapeo de regalos -->
+    <div class="card">
+      <h2>🎁 Regalos → Equipo + Unidad aleatoria</h2>
+      <table>
+        <thead><tr><th></th><th>Regalo</th><th>Equipo</th><th>Nombre en TikTok</th><th>Monedas</th><th>Invoca (aleatorio)</th></tr></thead>
+        <tbody id="giftRows"></tbody>
+      </table>
+      <div class="btnRow">
+        <button class="primary" id="saveGifts">💾 Guardar regalos</button>
+        <button id="resetGifts">↺ Restaurar</button>
+      </div>
+    </div>
+
+    <!-- Balance / Tier list -->
+    <div class="card full">
+      <h2>📊 Tier list y balance — tienes <b id="rosterCount">0</b> unidades</h2>
+      <table>
+        <thead><tr>
+          <th>Tier</th><th></th><th>Unidad</th><th>Score</th><th>Vida</th><th>Daño</th>
+          <th>DPS</th><th>Alcance</th><th>Vel.</th><th>Blindaje</th><th>Costo</th><th>Ventajas</th>
+        </tr></thead>
+        <tbody id="balanceRows"></tbody>
+      </table>
+      <div class="legend">
+        <b>Score</b> = fuerza estimada (DPS × vida efectiva, con bonus por alcance/área). Ordenado de más fuerte a más débil.<br>
+        <b>Tier:</b> <span style="color:#ff5b7f">S</span> dominante ·
+        <span style="color:#ffb340">A</span> fuerte ·
+        <span style="color:#5fd35f">B</span> medio ·
+        <span style="color:#9aa6c4">C</span> de apoyo/básico.
+        <b>Ventajas</b> = daño extra contra ciertos tipos (ej. Lancero x2.2 a Caballería).<br>
+        💡 Regla de costo: a mayor Score, más monedas debería costar el regalo. Ajusta los costos arriba para que sea justo.
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

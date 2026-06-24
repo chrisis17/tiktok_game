@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guerra de Países - TikTok Live Game</title>
+<style>
+  :root { --bg:#0e1118; --panel:#1b2030; --panel2:#232a3d; --line:#333f5c; --txt:#e8ecf5; --muted:#9aa6c4; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt);
+    font-family:'Segoe UI', system-ui, sans-serif; }
+  #wrap { display:flex; gap:14px; padding:12px; align-items:flex-start; justify-content:center; }
+
+  /* ===== Stage VERTICAL 9:16 (esto se captura en OBS) ===== */
+  #stageWrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+  #stage { position:relative; height:90vh; aspect-ratio:9/16; max-width:50vw;
+    border:2px solid var(--line); border-radius:16px; overflow:hidden; background:#000;
+    box-shadow:0 12px 50px rgba(0,0,0,.55); }
+  #field { width:100%; height:100%; display:block; image-rendering:pixelated; position:absolute; inset:0; }
+  /* Pantalla completa para capturar en OBS: 9:16 centrado sobre negro */
+  #stage:fullscreen { height:100vh; width:auto; max-width:none; aspect-ratio:9/16; border:none; border-radius:0; }
+  #stage::backdrop { background:#000; }
+  .stageTag { color:var(--muted); font-size:12px; }
+  .stageTag b { color:#ff5b7f; }
+
+  /* HUD arriba (equipo B) */
+  #topHud { position:absolute; top:0; left:0; right:0; display:flex; align-items:center; gap:10px;
+    padding:9px 14px; pointer-events:none;
+    background:linear-gradient(180deg, rgba(8,10,16,.92), transparent); }
+  .team-flag { font-size:30px; text-shadow:0 2px 6px #000; }
+  .team-name { font-weight:800; font-size:22px; flex:1; text-shadow:0 2px 6px #000; }
+  .team-count { font-size:15px; color:#fff; background:#0007; padding:2px 9px; border-radius:20px; }
+  .powerbar { height:9px; background:#0009; border-radius:6px; overflow:hidden; }
+  .powerbar i { display:block; height:100%; transition:width .15s; }
+  #bBarWrap { position:absolute; top:46px; left:14px; right:14px; pointer-events:none; }
+  .giftLegend { font-size:15px; letter-spacing:2px; color:#fff; text-shadow:0 1px 4px #000;
+    margin-bottom:3px; white-space:nowrap; overflow:hidden; }
+
+  #centerHud { position:absolute; top:66px; left:0; right:0; text-align:center; pointer-events:none; }
+  #phaseLabel { font-size:21px; font-weight:900; text-shadow:0 2px 8px #000; }
+  #timerLabel { font-size:18px; color:#ffd34d; font-weight:800; text-shadow:0 2px 6px #000; }
+  #roundLabel { font-size:12px; color:var(--muted); }
+
+  .hidden { display:none !important; }
+
+  /* ===== Panel inferior: chat (izq, negro) + marcadores (der) ===== */
+  #infoPanel { position:absolute; left:0; right:0; bottom:0; top:60%;
+    background:#000; display:flex; flex-direction:column; }
+  #aStrip { display:flex; align-items:center; gap:10px; padding:6px 14px 2px; }
+  #aBarWrap { padding:0 14px 6px; }
+  .panelBody { flex:1; display:flex; gap:8px; padding:2px 8px 8px; min-height:0; }
+  .chatZone { flex:1; background:#000; border-radius:4px; }
+  .leaderboards { width:48%; flex:none; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .lb { flex:1 1 0; min-height:0; background:rgba(20,24,36,.9); border:1px solid var(--line);
+    border-radius:10px; padding:6px 9px; overflow:hidden; display:flex; flex-direction:column; }
+  .lb-title { font-weight:800; font-size:12px; margin-bottom:4px; color:#ffd34d; flex:none; }
+  .lb-row { display:flex; justify-content:space-between; gap:6px; font-size:13px; padding:2px 0;
+    border-bottom:1px dashed #2a3350; white-space:nowrap; }
+  .lb-row span { overflow:hidden; text-overflow:ellipsis; }
+  .lb-row b { color:#fff; }
+  .lb-empty { color:var(--muted); font-size:12px; }
+
+  /* Votacion / Resultado (cubren solo la arena, arriba) */
+  #votingPanel, #resultPanel { position:absolute; top:0; left:0; right:0; height:60%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    padding:18px; background:rgba(8,10,16,.74); backdrop-filter:blur(2px); text-align:center; }
+  #votingPanel h2 { margin:0; font-size:19px; }
+  #candidates { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; }
+  .cand { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:9px 6px;
+    width:124px; color:var(--txt); cursor:pointer; font-family:inherit; transition:.1s; }
+  .cand:hover { background:#2a3450; border-color:#4a5a8c; transform:translateY(-2px); }
+  .cand:active { transform:translateY(0); }
+  .cand-flag { font-size:32px; }
+  .cand-name { font-weight:700; font-size:14px; }
+  .cand-wins { font-size:12px; color:#46d246; font-weight:700; margin-top:1px; }
+  .cand-gift { font-size:13px; color:#ffe9a8; margin-top:3px; }
+  .cand-votes { color:#ffd34d; font-size:12px; margin-top:1px; }
+  #resultText { font-size:38px; font-weight:900; text-shadow:0 4px 18px #000; }
+
+  /* ===== Columna lateral (controles, NO se transmite) ===== */
+  #side { width:470px; display:flex; flex-direction:column; gap:12px; }
+  h1 { font-size:18px; margin:2px 0 0; }
+  h1 small { color:var(--muted); font-weight:normal; font-size:12px; display:block; }
+  #tkBox { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+  .tk-row { display:flex; gap:8px; }
+  .tk-row input { flex:1; background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; }
+  .tk-row input:focus { outline:1px solid #4a5a8c; }
+  #tkConnect { background:#fe2c55; border:none; color:#fff; font-weight:700; border-radius:8px; padding:8px 14px; cursor:pointer; }
+  #tkConnect:hover { background:#ff4d70; }
+  .tk-status { font-size:13px; font-weight:700; padding:4px 2px; }
+  .tk-status.on { color:#46d246; }
+  .tk-status.off { color:#ff6a6a; }
+  .tk-sim { font-size:11px; color:var(--muted); display:flex; gap:5px; align-items:center; flex-wrap:wrap; }
+  .tk-sim button { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:4px 8px; cursor:pointer; font-size:11px; }
+  .tk-sim button:hover { background:#34406a; }
+  #ctrlBtns { display:flex; gap:8px; flex-wrap:wrap; }
+  .ctrlBtn { padding:10px 14px; border-radius:9px; border:1px solid var(--line);
+    background:var(--panel2); color:var(--txt); font-weight:700; cursor:pointer; font-size:14px; }
+  .ctrlBtn:hover { background:#34406a; }
+  .ctrlBtn.primary { background:#e0563f; border-color:#e0563f; }
+  .ctrlBtn.primary:hover { background:#f06a52; }
+  .ctrlBtn.ghost { background:transparent; }
+  .ctrlBtn.on { background:#2e9e5b; border-color:#2e9e5b; }
+
+  #recruitPanel { display:flex; gap:10px; }
+  .unitCol { flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px; }
+  .unitCol h3 { margin:2px 0 8px; font-size:13px; }
+  .unitGrid { display:flex; flex-direction:column; gap:5px; }
+  .unitBtn { display:grid; grid-template-columns:auto auto 1fr auto; align-items:center; gap:6px;
+    padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--panel2);
+    color:var(--txt); cursor:pointer; text-align:left; font-size:12px; }
+  .unitBtn:hover { background:#34406a; border-color:#4a5a8c; }
+  .unitBtn.tier4 { border-color:#7a5cc0; }
+  .unitBtn.tier5 { border-color:#caa23a; background:#2a2616; }
+  .ub-key { background:#000a; border-radius:4px; padding:1px 5px; font-size:11px; color:#ffd34d; min-width:22px; text-align:center; }
+  .ub-ico { font-size:17px; }
+  .ub-name { font-weight:700; }
+  .ub-gift { grid-column:2/5; font-size:10px; color:var(--muted); }
+  .ub-stars { color:#ffd34d; font-size:10px; }
+
+  #ranking { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .rk-title { font-weight:800; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  .rk-reset { background:var(--panel2); border:1px solid var(--line); color:var(--txt); border-radius:6px; cursor:pointer; font-size:12px; padding:2px 7px; }
+  .rk-reset:hover { background:#34406a; }
+  .ctrlBtn.muted { background:#5a3a3a; border-color:#7a4a4a; }
+  .rk-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed var(--line); font-size:14px; }
+  .rk-row b { color:#ffd34d; }
+  .rk-empty { color:var(--muted); font-size:13px; }
+  #help { color:var(--muted); font-size:12px; line-height:1.6; }
+  kbd { background:#000a; border:1px solid var(--line); border-radius:4px; padding:1px 6px; color:#ffd34d; }
+</style>
+</head>
+<body>
+<div id="wrap">
+
+  <!-- ===== JUEGO VERTICAL (capturar SOLO este recuadro en OBS) ===== -->
+  <div id="stageWrap">
+    <div id="stage">
+      <canvas id="field"></canvas>
+
+      <!-- HUD arriba: equipo B -->
+      <div id="topHud">
+        <span class="team-flag" id="bFlag">🏳️</span>
+        <span class="team-name" id="bName">País Arriba</span>
+        <span class="team-count">⚑ <b id="bCount">0</b></span>
+      </div>
+      <div id="bBarWrap">
+        <div class="giftLegend" id="bGifts"></div>
+        <div class="powerbar"><i id="bBar" style="width:50%"></i></div>
+      </div>
+
+      <!-- Fase + temporizador -->
+      <div id="centerHud">
+        <div id="phaseLabel">🗳️ VOTACIÓN</div>
+        <div id="timerLabel">⏱ 20s</div>
+        <div id="roundLabel">Ronda 1</div>
+      </div>
+
+      <!-- ===== Panel inferior: chat + marcadores ===== -->
+      <div id="infoPanel">
+        <div id="aStrip">
+          <span class="team-flag" id="aFlag">🏳️</span>
+          <span class="team-name" id="aName">País Abajo</span>
+          <span class="team-count">⚑ <b id="aCount">0</b></span>
+        </div>
+        <div id="aBarWrap">
+          <div class="giftLegend" id="aGifts"></div>
+          <div class="powerbar"><i id="aBar" style="width:50%"></i></div>
+        </div>
+        <div class="panelBody">
+          <div class="chatZone"></div>
+          <div class="leaderboards">
+            <div class="lb" id="topGifters"></div>
+            <div class="lb" id="topCountries"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Votacion -->
+      <div id="votingPanel">
+        <h2>🗳️ ¿Qué países deben luchar?</h2>
+        <div id="candidates"></div>
+        <div style="color:var(--txt);font-size:15px;font-weight:600">
+          💬 Comenta tu país: <b style="color:#ffd34d">+1</b> &nbsp;·&nbsp; 🎁 Regalo: <b style="color:#ffd34d">+10</b>
+        </div>
+      </div>
+
+      <!-- Resultado -->
+      <div id="resultPanel" class="hidden">
+        <div id="resultText">Ganador</div>
+        <div style="color:var(--muted)">Pulsa <kbd>ESPACIO</kbd> para la siguiente ronda</div>
+      </div>
+    </div>
+    <div class="stageTag">📱 Frame vertical 9:16 — <b>captura solo este recuadro en OBS</b> (el chat de TikTok llena la zona inferior izquierda)</div>
+  </div>
+
+  <!-- ===== PANEL DE CONTROL (no se transmite) ===== -->
+  <div id="side">
+    <h1>⚔️ GUERRA DE PAÍSES <small>TikTok Live Game</small></h1>
+
+    <!-- Conexión a TikTok LIVE (Fase 2) -->
+    <div id="tkBox">
+      <div class="tk-row">
+        <input id="tkUser" placeholder="@tu_usuario_tiktok">
+        <button id="tkConnect">🔴 Conectar</button>
+      </div>
+      <div id="tkStatus" class="tk-status off">🔴 Servidor apagado (node server.js)</div>
+      <div class="tk-sim">🧪 Probar sin estar en vivo:
+        <button onclick="TikTok.sim('gift')">🎁 Regalo</button>
+        <button onclick="TikTok.sim('like')">👍 Likes</button>
+        <button onclick="TikTok.sim('chat')">💬 Comentario</button>
+      </div>
+    </div>
+
+    <div id="ctrlBtns"></div>
+
+    <div id="recruitPanel" class="hidden">
+      <div class="unitCol">
+        <h3><span id="aColFlag"></span> Regalos ABAJO <span style="color:var(--muted)">(teclas 1-6)</span></h3>
+        <div class="unitGrid" id="aUnits"></div>
+      </div>
+      <div class="unitCol">
+        <h3><span id="bColFlag"></span> Regalos ARRIBA <span style="color:var(--muted)">(⇧ + 1-6)</span></h3>
+        <div class="unitGrid" id="bUnits"></div>
+      </div>
+    </div>
+
+    <div id="ranking"></div>
+
+    <div id="help">
+      <b>Flujo:</b> Comentar país (clic) → Reclutar con regalos → <kbd>⚔️ PELEAR</kbd> → el ganador suma al ranking.<br>
+      <b>Regalos:</b> 6 para el equipo de abajo, 6 para el de arriba; la unidad sale <b>aleatoria</b> según el valor.<br>
+      <b>Teclado:</b> <kbd>1-6</kbd> = regalos abajo · <kbd>⇧</kbd>+<kbd>1-6</kbd> = arriba · <kbd>ESPACIO</kbd> = avanzar fase.
+    </div>
+  </div>
+</div>
+
+<script src="js/utils.js"></script>
+<script src="js/config.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/projectile.js"></script>
+<script src="js/unit.js"></script>
+<script src="js/world.js"></script>
+<script src="js/render.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/game.js"></script>
+<script src="js/tiktok.js"></script>
+</body>
+</html>

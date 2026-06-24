@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 Control remoto — Guerra de Países</title>
+<style>
+  :root { --bg:#0e1118; --panel:#1b2030; --panel2:#232a3d; --line:#333f5c; --txt:#e8ecf5; --muted:#9aa6c4; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font-family:'Segoe UI',system-ui,sans-serif; padding:16px; max-width:760px; margin:0 auto; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:14px; }
+  .cstat { font-weight:800; font-size:14px; margin-bottom:12px; }
+  .cstat.on { color:#46d246; } .cstat.off { color:#ff6a6a; }
+  .toprow { display:flex; gap:10px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .toprow input { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:14px; }
+  #sent { color:#46d246; font-weight:800; opacity:0; transition:opacity .15s; }
+
+  .cols { display:flex; gap:12px; }
+  .col { flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  .col h2 { margin:2px 0 10px; font-size:15px; text-align:center; }
+  .col.a h2 { color:#ff8a6a; } .col.b h2 { color:#6fa8ff; }
+  .gbtn { width:100%; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:8px;
+    padding:13px 12px; margin-bottom:7px; border:1px solid var(--line); border-radius:10px;
+    background:var(--panel2); color:var(--txt); cursor:pointer; font-size:15px; text-align:left; }
+  .gbtn:hover { background:#34406a; } .gbtn:active { transform:scale(.98); }
+  .gbtn.t4 { border-color:#7a5cc0; } .gbtn.t5 { border-color:#caa23a; background:#2a2616; }
+  .gi { font-size:22px; } .gn { font-weight:700; } .gc { color:var(--muted); font-size:13px; }
+
+  #likeBtn { width:100%; margin-top:14px; padding:15px; border:none; border-radius:12px;
+    background:#2e9e5b; color:#fff; font-weight:800; font-size:16px; cursor:pointer; }
+  #likeBtn:hover { background:#37b86b; }
+  .note { color:var(--muted); font-size:12px; margin-top:14px; line-height:1.6; }
+  .note b { color:var(--txt); }
+</style>
+</head>
+<body>
+  <h1>🎮 Control remoto <span id="sent">✓ enviado</span></h1>
+  <div class="sub">Manda regalos y likes al juego (en tu celular u otra pantalla). El juego responde según su fase: en votación los regalos votan, en batalla invocan tropas.</div>
+  <div id="cStatus" class="cstat off">🔴 Conectando…</div>
+
+  <div class="toprow">
+    <span>👤 Nombre a mostrar:</span>
+    <input id="cUser" placeholder="🎮 Host (opcional)" maxlength="20">
+  </div>
+
+  <div class="cols">
+    <div class="col a">
+      <h2>🔻 Equipo ABAJO</h2>
+      <div id="colA"></div>
+    </div>
+    <div class="col b">
+      <h2>🔺 Equipo ARRIBA</h2>
+      <div id="colB"></div>
+    </div>
+  </div>
+
+  <button id="likeBtn">👍 +100 Tap-Tap (likes)</button>
+
+  <div class="note">
+    <b>Cómo usarlo:</b> abre el juego en el celular (<b>http://IP-de-tu-laptop:8080</b>), transmite su pantalla en tu TikTok LIVE,
+    y desde aquí (en la laptop) pulsa los regalos. Para <b>votar un país</b> en la fase de votación, pulsa el regalo que el juego
+    muestra junto a ese país (ej. 🇵🇪 Perú 🌹 → pulsa <b>Rosa</b>).
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/control.js"></script>
+</body>
+</html>
