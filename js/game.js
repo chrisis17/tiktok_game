@@ -300,7 +300,7 @@ class Game {
   setText(id, v) { if (this.dom[id]) this.dom[id].textContent = v; }
 
   // Procesa un REGALO: define el equipo y aparece UNA unidad aleatoria por valor
-  spawnGift(giftId, gifter, spotlight = true, realCoin = 0) {
+  spawnGift(giftId, gifter, spotlight = true, realCoin = 0, record = true) {
     if (this.phase !== 'RECRUIT' && this.phase !== 'BATTLE') return;
     const g = GIFTS.find(x => x.id === giftId);
     if (!g) return;
@@ -310,8 +310,9 @@ class Game {
     // En vivo usa el costo REAL del regalo (diamantes de TikTok); si no, el del config
     const coin = realCoin > 0 ? realCoin : giftCoin(g);
     const name = gifter || 'Tú 👑';
-    if (unit) { unit.gifter = name; unit.nameT = 8; }   // nombre sobre el personaje
-    this.addGift(name, coin);
+    // record=false (relleno de prueba): no pone nombre ni suma al Top Regalos
+    if (unit) { unit.gifter = record ? name : null; unit.nameT = record ? 8 : 0; }
+    if (record) this.addGift(name, coin);
     if (spotlight) this.sfx('spawn');
     if (spotlight && unit) this.enqueueSpotlight({
       unit, gifter: name, gift: g.icon + ' ' + g.name,
@@ -586,8 +587,8 @@ class Game {
         this.autofillT -= dt;
         if (this.autofillT <= 0) {
           this.autofillT = 0.25;
-          // El relleno automático NO dispara enfoques (es solo para probar batallas)
-          this.spawnGift(this.weightedGift(), choice(FAKE_GIFTERS), false);
+          // El relleno automático NO dispara enfoques NI suma al Top Regalos (solo prueba)
+          this.spawnGift(this.weightedGift(), null, false, 0, false);
         }
       }
       if (this.timer <= 0) this.startBattle();
