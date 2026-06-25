@@ -7,7 +7,8 @@
 const W = 720, H = 1280;   // resolucion interna vertical (9:16)
 let game;
 
-window.addEventListener('load', () => { game = new Game(); });
+// window.game para que tiktok.js / control puedan acceder (let no lo pone en window)
+window.addEventListener('load', () => { window.game = game = new Game(); });
 
 class Game {
   constructor() {
