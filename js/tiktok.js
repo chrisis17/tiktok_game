@@ -43,7 +43,13 @@
       else setStatus('🟡 Servidor listo — pulsa Conectar', '');
       return;
     }
+
+    // Espejo en vivo: el host envía el estado y los efectos de sonido
+    if (m.type === 'state') { if (window.game && game.mode === 'view') game.applySnapshot(m); return; }
+    if (m.type === 'sfx') { if (window.game && game.mode === 'view' && typeof SFX !== 'undefined' && SFX[m.name]) SFX[m.name](); return; }
+
     if (!window.game) return;
+    if (game.mode === 'view') return;   // el espejo no procesa eventos, solo refleja el estado
 
     if (m.type === 'gift') {
       // Durante la votación, el regalo cuenta como voto del país
@@ -85,6 +91,8 @@
   window.TikTok = {
     connectUser(u) { send({ action: 'connect', username: u }); },
     sim(kind) { send({ action: 'sim', kind }); },
+    event(data) { return send({ action: 'event', data }); },   // host: enviar estado/sfx
+    connected() { return !!(ws && ws.readyState === 1); },
   };
 
   window.addEventListener('load', () => {

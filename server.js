@@ -44,9 +44,9 @@ const httpServer = http.createServer((req, res) => {
 // ---------------- WebSocket en el MISMO puerto ----------------
 const wss = new WebSocketServer({ server: httpServer });
 
-function broadcast(obj) {
+function broadcast(obj, exclude) {
   const s = JSON.stringify(obj);
-  wss.clients.forEach(c => { if (c.readyState === 1) c.send(s); });
+  wss.clients.forEach(c => { if (c.readyState === 1 && c !== exclude) c.send(s); });
 }
 
 function disconnectCurrent() {
@@ -110,7 +110,7 @@ wss.on('connection', ws => {
       const m = JSON.parse(msg);
       if (m.action === 'connect') connectTo(m.username);
       else if (m.action === 'sim') simulate(m.kind);
-      else if (m.action === 'event' && m.data) broadcast(m.data);   // control remoto manual
+      else if (m.action === 'event' && m.data) broadcast(m.data, ws);   // control/estado a los demás (sin eco)
     } catch (e) {}
   });
 });

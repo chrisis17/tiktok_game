@@ -18,6 +18,10 @@ class Game {
 
     this.world = new World(W, H);
     this.settings = loadSettings();
+    // Modo: ?host = corre el juego y lo emite | ?view = espejo (solo dibuja) | normal = solo
+    const params = new URLSearchParams(location.search);
+    this.mode = params.has('view') ? 'view' : (params.has('host') ? 'host' : 'solo');
+    this.bob = 0; this.snap = null; this._prevPh = null; this._lastState = 0;
     this.phase = 'VOTING';
     this.round = 1;
     this.ranking = loadRanking();   // ranking persistente entre sesiones
@@ -64,10 +68,11 @@ class Game {
 
     this.buildGiftButtons();
     this.buildControls();
-    this.bindKeys();
+    if (this.mode !== 'view') this.bindKeys();
     this.renderRanking();
     this.renderGifters();
-    this.startVoting();
+    if (this.mode === 'view') this.setupViewer();
+    else this.startVoting();
 
     // Si cambias ajustes en admin.html (otra pestana), se aplican aqui en vivo
     window.addEventListener('storage', (e) => {
@@ -158,7 +163,7 @@ class Game {
       this.world.spawn(team, 'soldado', rand(b.x0 + 6, b.x1 - 6), rand(zoneY[0], zoneY[1]));
       spawned++;
     }
-    if (spawned) SFX.like();
+    if (spawned) this.sfx('like');
   }
 
   // ---------- FASE: Votacion ----------
@@ -168,7 +173,7 @@ class Game {
     this.timer = this.settings.voteTime;
     this.world.reset();
     this.spotlight = null; this.spotlightQueue = [];
-    SFX.phase();
+    this.sfx('phase');
     // Por defecto: los 4 países con MÁS victorias; si hay menos, se rellena
     // con los países por defecto. El chat puede sumar más con addVoteByComment.
     const ranked = COUNTRIES
@@ -229,7 +234,7 @@ class Game {
     });
   }
 
-  vote(i, amount) { this.candidates[i].votes += amount; this.renderCandidates(); SFX.vote(); }
+  vote(i, amount) { this.candidates[i].votes += amount; this.renderCandidates(); this.sfx('vote'); }
 
   // Un REGALO durante la votación = +10 al país que tiene ese regalo asignado
   voteByGift(giftName) {
@@ -267,7 +272,7 @@ class Game {
     this.setText('aColFlag', A.flag); this.setText('bColFlag', B.flag);
     if (this.dom.aName) this.dom.aName.style.color = this.world.colorA;
     if (this.dom.bName) this.dom.bName.style.color = this.world.colorB;
-    SFX.phase();
+    this.sfx('phase');
     this.setPanels();
   }
 
@@ -286,7 +291,7 @@ class Game {
     const name = gifter || 'Tú 👑';
     if (unit) { unit.gifter = name; unit.nameT = 8; }   // nombre sobre el personaje
     this.addGift(name, coin);
-    if (spotlight) SFX.spawn();
+    if (spotlight) this.sfx('spawn');
     if (spotlight && unit) this.enqueueSpotlight({
       unit, gifter: name, gift: g.icon + ' ' + g.name,
       name: UNIT_TYPES[unitId].name, coin,
@@ -335,8 +340,8 @@ class Game {
   activateSpotlight(item) {
     this.spotlight = item;
     if (!item) return;
-    if (item.intensity >= 4) SFX.epic();
-    else if (item.intensity >= 3) SFX.spawnBig();
+    if (item.intensity >= 4) this.sfx('epic');
+    else if (item.intensity >= 3) this.sfx('spawnBig');
   }
 
   updateSpotlight(dt) {
@@ -378,7 +383,7 @@ class Game {
     this.settings = loadSettings();
     this.phase = 'BATTLE';
     this.timer = this.settings.battleTime;
-    SFX.battle();
+    this.sfx('battle');
     this.addShake(5, 0.3);
     this.setPanels();
   }
@@ -399,7 +404,7 @@ class Game {
     this.world.addConfetti(winnerId
       ? (winnerId === A.id ? this.world.colorA : this.world.colorB)
       : '#ffd34d');
-    SFX.win();
+    this.sfx('win');
     this.addShake(8, 0.5);
     this.setText('resultText', msg);
     this.renderRanking();
@@ -486,8 +491,10 @@ class Game {
       let dt = (now - this.last) / 1000;
       this.last = now;
       if (dt > 0.1) dt = 0.1;          // evita saltos enormes si hubo throttling
+      if (this.mode === 'view') { this.viewerFrame(dt); return; }
       this.update(dt);
       this.render();
+      if (this.mode === 'host') this.maybeSendState(now);
     };
     try {
       const src = 'var t=setInterval(function(){postMessage(0);},16);' +
@@ -587,5 +594,171 @@ class Game {
       ctx.fillStyle = '#fff'; ctx.fillText(nm, u.x, yy);
     }
     ctx.textAlign = 'left';
+  }
+
+  // Reproduce un efecto local y, si es host, lo envía al espejo
+  sfx(name) {
+    if (typeof SFX !== 'undefined' && SFX[name]) SFX[name]();
+    if (this.mode === 'host' && window.TikTok && TikTok.event) TikTok.event({ type: 'sfx', name });
+  }
+
+  // ====================== HOST: emitir el estado ======================
+  maybeSendState(now) {
+    if (now - this._lastState < 66) return;   // ~15 veces/seg
+    this._lastState = now;
+    if (window.TikTok && TikTok.event) TikTok.event(this.serializeState());
+  }
+
+  serializeState() {
+    const w = this.world, s = w.getStats();
+    const u = [];
+    for (let i = 0; i < w.units.length; i++) {
+      const x = w.units[i];
+      if (x.dead) continue;
+      u.push([Math.round(x.x), Math.round(x.y), UNIT_ORDER.indexOf(x.typeId),
+        x.team === 'A' ? 0 : 1, Math.max(0, Math.min(255, Math.round(x.hp / x.maxHp * 255))),
+        x.dir > 0 ? 1 : 0, (x.nameT > 0 && x.gifter) ? x.gifter : 0]);
+    }
+    const pr = [];
+    for (let i = 0; i < w.projectiles.length; i++) {
+      const p = w.projectiles[i];
+      pr.push([Math.round(p.x), Math.round(p.y), Math.round((p.angle || 0) * 100) / 100, p.splash > 0 ? 1 : 0]);
+    }
+    let sp = 0;
+    if (this.spotlight) {
+      const sl = this.spotlight;
+      sp = { g: sl.gift, nm: sl.name, co: sl.coin, gf: sl.gifter, t: Math.round(sl.t * 100) / 100,
+        du: sl.dur, sz: sl.size, in: sl.intensity, ut: UNIT_ORDER.indexOf(sl.unit.typeId),
+        col: sl.unit.col, sec: sl.unit.colSec };
+    }
+    const rk = Object.keys(this.ranking).map(id => [id, this.ranking[id]]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const gf = Object.keys(this.gifters).map(n => [n, this.gifters[n]]).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const cn = this.candidates.map(c => [c.c.id, c.votes, this.ranking[c.c.id] || 0]);
+    return {
+      type: 'state', ph: this.phase, rd: this.round, tm: Math.max(0, Math.ceil(this.timer)),
+      aId: w.countryA ? w.countryA.id : null, bId: w.countryB ? w.countryB.id : null,
+      colA: w.colorA, colB: w.colorB, na: s.aliveA, nb: s.aliveB, pa: s.powerA, pb: s.powerB,
+      u, pr, sp, rk, gf, cn,
+      res: this.phase === 'RESULT' && this.dom.resultText ? this.dom.resultText.textContent : '',
+    };
+  }
+
+  // ====================== ESPEJO: recibir y dibujar ======================
+  setupViewer() {
+    document.body.classList.add('viewer');
+    const hint = document.getElementById('viewerStart');
+    if (hint) hint.classList.remove('hidden');
+    const startAll = () => {
+      if (typeof SFX !== 'undefined') { SFX.init(); SFX.resume(); SFX.music.start(); }
+      const st = document.getElementById('stage');
+      if (st && st.requestFullscreen) st.requestFullscreen().catch(() => {});
+      if (hint) hint.classList.add('hidden');
+    };
+    window.addEventListener('pointerdown', startAll, { once: true });
+    this.setText('phaseLabel', 'Esperando…');
+  }
+
+  applySnapshot(snap) {
+    this.snap = snap;
+    if (snap.ph === 'RESULT' && this._prevPh !== 'RESULT') this.world.addConfetti('#ffd34d');
+    this._prevPh = snap.ph;
+    this.viewerApplyHUD(snap);
+  }
+
+  viewerFrame(dt) {
+    // anima el confeti local
+    const ps = this.world.particles;
+    for (let i = 0; i < ps.length; i++) { const p = ps[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 140 * dt; }
+    this.world.particles = ps.filter(p => p.life > 0);
+    this.bob += dt * 9;
+    this.renderSnapshot();
+  }
+
+  viewerApplyHUD(snap) {
+    const A = COUNTRIES.find(c => c.id === snap.aId), B = COUNTRIES.find(c => c.id === snap.bId);
+    const names = { VOTING: '🗳️ VOTACIÓN', RECRUIT: '🛡️ RECLUTAMIENTO', BATTLE: '⚔️ BATALLA', RESULT: '🏁 RESULTADO' };
+    this.setText('phaseLabel', names[snap.ph] || snap.ph);
+    this.setText('timerLabel', snap.ph === 'RESULT' ? '' : '⏱ ' + snap.tm + 's');
+    this.setText('roundLabel', 'Ronda ' + snap.rd);
+    if (A) { this.setText('aFlag', A.flag); this.setText('aName', A.name); if (this.dom.aName) this.dom.aName.style.color = snap.colA; }
+    if (B) { this.setText('bFlag', B.flag); this.setText('bName', B.name); if (this.dom.bName) this.dom.bName.style.color = snap.colB; }
+    this.setText('aCount', snap.na); this.setText('bCount', snap.nb);
+    const tot = Math.max(1, snap.pa + snap.pb);
+    if (this.dom.aBar) { this.dom.aBar.style.width = (snap.pa / tot * 100) + '%'; this.dom.aBar.style.background = snap.colA; }
+    if (this.dom.bBar) { this.dom.bBar.style.width = (snap.pb / tot * 100) + '%'; this.dom.bBar.style.background = snap.colB; }
+    if (this.dom.aGifts) this.dom.aGifts.textContent = '🎁 ' + GIFTS_A.map(g => g.icon).join(' ');
+    if (this.dom.bGifts) this.dom.bGifts.textContent = '🎁 ' + GIFTS_B.map(g => g.icon).join(' ');
+    this.dom.votingPanel.classList.toggle('hidden', snap.ph !== 'VOTING');
+    this.dom.resultPanel.classList.toggle('hidden', snap.ph !== 'RESULT');
+    if (this.dom.recruitPanel) this.dom.recruitPanel.classList.add('hidden');
+    if (snap.ph === 'RESULT') this.setText('resultText', snap.res || '¡Fin!');
+    if (snap.ph === 'VOTING') this.viewerRenderCandidates(snap.cn);
+    this.viewerLeaderboards(snap.gf, snap.rk);
+  }
+
+  viewerRenderCandidates(cn) {
+    if (!this.dom.candidates) return;
+    const n = cn.length;
+    const wpx = n <= 4 ? 124 : n <= 6 ? 104 : n <= 8 ? 92 : 82;
+    const fs = n <= 4 ? 34 : n <= 6 ? 28 : n <= 8 ? 24 : 21;
+    this.dom.candidates.innerHTML = '';
+    cn.forEach((c, i) => {
+      const country = COUNTRIES.find(x => x.id === c[0]);
+      if (!country) return;
+      const vg = VOTE_GIFTS[i % VOTE_GIFTS.length];
+      const el = document.createElement('div');
+      el.className = 'cand'; el.style.width = wpx + 'px';
+      el.innerHTML = `<div class="cand-flag" style="font-size:${fs}px">${country.flag}</div>
+        <div class="cand-name">${country.name}</div>
+        <div class="cand-wins">🏆 ${c[2]}</div>
+        <div class="cand-gift">${vg.icon} +${VOTE_GIFT_POINTS}</div>
+        <div class="cand-votes">${c[1]} pts</div>`;
+      this.dom.candidates.appendChild(el);
+    });
+  }
+
+  viewerLeaderboards(gf, rk) {
+    const medal = ['🥇', '🥈', '🥉'];
+    if (this.dom.topGifters) {
+      this.dom.topGifters.innerHTML = '<div class="lb-title">🎁 TOP REGALOS</div>' +
+        (gf.length ? gf.map((r, i) => `<div class="lb-row"><span>${medal[i]} ${r[0]}</span><b>${r[1]}🪙</b></div>`).join('') : '<div class="lb-empty">Envía regalos…</div>');
+    }
+    if (this.dom.topCountries) {
+      this.dom.topCountries.innerHTML = '<div class="lb-title">🏆 TOP PAÍSES</div>' +
+        (rk.length ? rk.map((r, i) => { const c = COUNTRIES.find(x => x.id === r[0]); return `<div class="lb-row"><span>${medal[i]} ${c ? c.flag + ' ' + c.name : r[0]}</span><b>${r[1]}</b></div>`; }).join('') : '<div class="lb-empty">Aún sin batallas</div>');
+    }
+  }
+
+  renderSnapshot() {
+    const ctx = this.ctx, snap = this.snap, w = this.world;
+    ctx.fillStyle = '#0e1118'; ctx.fillRect(0, 0, W, H);
+    if (!snap) {
+      ctx.fillStyle = '#9aa6c4'; ctx.font = '22px "Segoe UI", sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('Esperando al juego…', W / 2, H / 2); ctx.textAlign = 'left'; return;
+    }
+    w.colorA = snap.colA; w.colorB = snap.colB;
+    w.countryA = COUNTRIES.find(c => c.id === snap.aId) || null;
+    w.countryB = COUNTRIES.find(c => c.id === snap.bId) || null;
+    drawBackground(ctx, w); drawFieldBanners(ctx, w);
+    const secA = w.countryA ? w.countryA.secondary : '#222';
+    const secB = w.countryB ? w.countryB.secondary : '#222';
+    const us = snap.u.map(a => {
+      const id = UNIT_ORDER[a[2]]; const t = UNIT_TYPES[id];
+      return { x: a[0], y: a[1], typeId: id, t, team: a[3] ? 'B' : 'A',
+        col: a[3] ? snap.colB : snap.colA, colSec: a[3] ? secB : secA,
+        hp: a[4] / 255 * t.hp, maxHp: t.hp, dir: a[5] ? 1 : -1,
+        gifter: a[6] || null, nameT: a[6] ? 1 : 0, flash: 0, lunge: 0,
+        moving: snap.ph === 'BATTLE', bob: this.bob };
+    });
+    us.sort((p, q) => p.y - q.y);
+    for (let i = 0; i < us.length; i++) drawUnit(ctx, us[i]);
+    for (let i = 0; i < snap.pr.length; i++) { const p = snap.pr[i]; drawProjectile(ctx, { x: p[0], y: p[1], angle: p[2], splash: p[3], color: '#e2552f' }); }
+    for (let i = 0; i < w.particles.length; i++) drawParticle(ctx, w.particles[i]);
+    if (snap.sp) {
+      const sp = snap.sp; const id = UNIT_ORDER[sp.ut];
+      const fu = { typeId: id, t: UNIT_TYPES[id], col: sp.col, colSec: sp.sec, bob: this.bob };
+      drawSpotlight(ctx, { unit: fu, gifter: sp.gf, gift: sp.g, name: sp.nm, coin: sp.co, t: sp.t, dur: sp.du, size: sp.sz, intensity: sp.in }, w);
+    }
+    this.drawNames(ctx, us);
   }
 }
