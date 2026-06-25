@@ -808,12 +808,13 @@ class Game {
     const secB = w.countryB ? w.countryB.secondary : '#222';
     const us = snap.u.map(a => {
       const id = UNIT_ORDER[a[2]]; const t = UNIT_TYPES[id];
+      if (!t) return null;   // tipo desconocido (versión vieja en caché): saltar, no romper
       return { x: a[0], y: a[1], typeId: id, t, team: a[3] ? 'B' : 'A',
         col: a[3] ? snap.colB : snap.colA, colSec: a[3] ? secB : secA,
         hp: a[4] / 255 * t.hp, maxHp: t.hp, dir: a[5] ? 1 : -1,
         gifter: a[6] || null, nameT: a[6] ? 1 : 0, flash: 0, lunge: 0,
         moving: snap.ph === 'BATTLE', bob: this.bob };
-    });
+    }).filter(Boolean);
     us.sort((p, q) => p.y - q.y);
     for (let i = 0; i < us.length; i++) drawUnit(ctx, us[i]);
     for (let i = 0; i < snap.pr.length; i++) { const p = snap.pr[i]; drawProjectile(ctx, { x: p[0], y: p[1], angle: p[2], splash: p[3], color: '#e2552f' }); }
