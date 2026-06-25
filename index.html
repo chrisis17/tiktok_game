@@ -65,6 +65,7 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
     padding:18px; background:rgba(8,10,16,.74); backdrop-filter:blur(2px); text-align:center; }
   #votingPanel h2 { margin:0; font-size:19px; }
+  #voteTimer { font-size:24px; font-weight:900; color:#ffd34d; text-shadow:0 2px 8px #000; }
   #candidates { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; }
   .cand { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:9px 6px;
     width:124px; color:var(--txt); cursor:pointer; font-family:inherit; transition:.1s; }
@@ -204,6 +205,7 @@
       <!-- Votacion -->
       <div id="votingPanel">
         <h2>🗳️ ¿Qué países deben luchar?</h2>
+        <div id="voteTimer">⏱ 20s</div>
         <div id="candidates"></div>
         <div style="color:var(--txt);font-size:15px;font-weight:600">
           💬 Comenta tu país: <b style="color:#ffd34d">+1</b> &nbsp;·&nbsp; 🎁 Regalo: <b style="color:#ffd34d">+10</b>
@@ -247,6 +249,9 @@
 
     <!-- Controles del host (no se transmiten) -->
     <div id="hostControls">
+      <label>👤 Nombre del usuario <small>(aparece sobre el personaje al mandar regalo)</small>
+        <input id="hostUser" placeholder="ej. maria_07" maxlength="20">
+      </label>
       <label>💬 Comentar país <small>(+1 voto; lo agrega si es nuevo)</small>
         <input id="hostComment" placeholder="ej. México, Brasil…" maxlength="20">
       </label>

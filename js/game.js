@@ -100,7 +100,7 @@ class Game {
           <span class="ub-name">${g.name}</span>
           <span class="ub-gift">${coin}🪙 → ${pool} (aleatorio)</span>`;
         b.title = `${g.name}: invoca una unidad aleatoria para el equipo ${team}`;
-        b.onclick = () => this.spawnGift(g.id);
+        b.onclick = () => this.spawnGift(g.id, this.hostUser());
         host.appendChild(b);
       });
     };
@@ -461,6 +461,13 @@ class Game {
   }
 
   // ---------- Teclado ----------
+  // Nombre de usuario escrito en el panel del host (para los regalos manuales)
+  hostUser() {
+    const el = document.getElementById('hostUser');
+    const v = el ? el.value.trim() : '';
+    return v ? '@' + v.replace(/^@/, '') : '';
+  }
+
   // Controles del host (panel lateral): comentar país + tiempos
   setupHostControls() {
     const c = document.getElementById('hostComment');
@@ -508,7 +515,7 @@ class Game {
       const m = e.code.match(/^Digit([1-6])$/);
       if (m) {
         const g = giftByKey(+m[1] - 1, e.shiftKey ? 'B' : 'A');
-        if (g) this.spawnGift(g.id);
+        if (g) this.spawnGift(g.id, this.hostUser());
       }
     });
   }
@@ -583,7 +590,9 @@ class Game {
   updateHUD() {
     const names = { VOTING: '🗳️ VOTACIÓN', RECRUIT: '🛡️ RECLUTAMIENTO', BATTLE: '⚔️ BATALLA', RESULT: '🏁 RESULTADO' };
     this.setText('phaseLabel', names[this.phase]);
-    this.setText('timerLabel', (this.phase === 'RESULT') ? '' : '⏱ ' + Math.max(0, Math.ceil(this.timer)) + 's');
+    const tstr = '⏱ ' + Math.max(0, Math.ceil(this.timer)) + 's';
+    this.setText('timerLabel', (this.phase === 'RESULT') ? '' : tstr);
+    if (this.phase === 'VOTING') this.setText('voteTimer', tstr);   // visible dentro del panel
     const s = this.world.getStats();
     this.setText('aCount', s.aliveA);
     this.setText('bCount', s.aliveB);
@@ -726,7 +735,7 @@ class Game {
     this.dom.resultPanel.classList.toggle('hidden', snap.ph !== 'RESULT');
     if (this.dom.recruitPanel) this.dom.recruitPanel.classList.add('hidden');
     if (snap.ph === 'RESULT') this.setText('resultText', snap.res || '¡Fin!');
-    if (snap.ph === 'VOTING') this.viewerRenderCandidates(snap.cn);
+    if (snap.ph === 'VOTING') { this.setText('voteTimer', '⏱ ' + snap.tm + 's'); this.viewerRenderCandidates(snap.cn); }
     this.viewerLeaderboards(snap.gf, snap.rk);
   }
 
