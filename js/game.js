@@ -69,7 +69,7 @@ class Game {
 
     this.buildGiftButtons();
     this.buildControls();
-    if (this.mode !== 'view') this.bindKeys();
+    if (this.mode !== 'view') { this.bindKeys(); this.setupHostControls(); }
     this.renderRanking();
     this.renderGifters();
     if (this.mode === 'view') this.setupViewer();
@@ -461,9 +461,42 @@ class Game {
   }
 
   // ---------- Teclado ----------
+  // Controles del host (panel lateral): comentar país + tiempos
+  setupHostControls() {
+    const c = document.getElementById('hostComment');
+    if (c) c.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const ok = this.addVoteByComment(c.value);
+      c.style.borderColor = ok ? '#2e9e5b' : '#a14458';
+      setTimeout(() => { c.style.borderColor = ''; }, 600);
+      c.value = '';
+    });
+    const sv = document.getElementById('setVote');
+    if (sv) {
+      sv.value = this.settings.voteTime;
+      sv.addEventListener('change', () => {
+        const v = Math.max(3, Math.min(120, Math.round(+sv.value) || this.settings.voteTime));
+        sv.value = v; this.settings.voteTime = v; saveSettings(this.settings);
+        if (this.phase === 'VOTING') this.timer = v;   // aplica ya si estás en votación
+      });
+    }
+    const sr = document.getElementById('setRecruit');
+    if (sr) {
+      sr.value = this.settings.recruitTime;
+      sr.addEventListener('change', () => {
+        const v = Math.max(3, Math.min(180, Math.round(+sr.value) || this.settings.recruitTime));
+        sr.value = v; this.settings.recruitTime = v; saveSettings(this.settings);
+        if (this.phase === 'RECRUIT') this.timer = v;
+      });
+    }
+  }
+
   bindKeys() {
     window.addEventListener('keydown', e => {
       if (e.repeat) return;
+      // no spawnear cuando estás escribiendo en un campo
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
       if (e.code === 'Space') {
         e.preventDefault();
         if (this.phase === 'VOTING') this.chooseTop2();

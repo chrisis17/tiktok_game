@@ -102,6 +102,13 @@
   .ctrlBtn.ghost { background:transparent; }
   .ctrlBtn.on { background:#2e9e5b; border-color:#2e9e5b; }
 
+  #hostControls { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  #hostControls label { font-size:13px; color:var(--txt); display:flex; flex-direction:column; gap:4px; }
+  #hostControls small { color:var(--muted); font-weight:normal; }
+  #hostControls input { background:var(--panel2); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:13px; transition:border-color .2s; }
+  #hostControls input:focus { outline:1px solid #4a5a8c; }
+  #hostControls .hc-times { display:flex; gap:10px; }
+  #hostControls .hc-times label { flex:1; }
   #recruitPanel { display:flex; gap:10px; }
   .unitCol { flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:8px; }
   .unitCol h3 { margin:2px 0 8px; font-size:13px; }
@@ -237,6 +244,21 @@
     </div>
 
     <div id="ctrlBtns"></div>
+
+    <!-- Controles del host (no se transmiten) -->
+    <div id="hostControls">
+      <label>💬 Comentar país <small>(+1 voto; lo agrega si es nuevo)</small>
+        <input id="hostComment" placeholder="ej. México, Brasil…" maxlength="20">
+      </label>
+      <div class="hc-times">
+        <label>⏱ Votación (s)
+          <input id="setVote" type="number" min="3" max="120">
+        </label>
+        <label>🛡️ Reclutamiento (s)
+          <input id="setRecruit" type="number" min="3" max="180">
+        </label>
+      </div>
+    </div>
 
     <div id="recruitPanel" class="hidden">
       <div class="unitCol">
