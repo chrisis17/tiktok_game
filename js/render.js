@@ -344,7 +344,7 @@ function drawSpotlight(ctx, sp, world) {
   ctx.fillText('envió  ' + sp.gift, cx, cy - sp.size * 1.45 + 26);
   ctx.fillStyle = ac;
   ctx.font = 'bold 26px "Segoe UI", sans-serif';
-  ctx.fillText(sp.name + '  ·  ' + sp.coin + '🪙', cx, by + size + 40);
+  ctx.fillText(window.STREAM_SAFE ? sp.name : (sp.name + '  ·  ' + sp.coin + '🪙'), cx, by + size + 40);
   if (sp.intensity >= 4) {
     ctx.fillStyle = '#ffd34d';
     ctx.font = 'bold 22px "Segoe UI", sans-serif';

@@ -22,6 +22,10 @@ class Game {
     // Modo: ?host = corre el juego y lo emite | ?view = espejo (solo dibuja) | normal = solo
     const params = new URLSearchParams(location.search);
     this.mode = params.has('view') ? 'view' : (params.has('host') ? 'host' : 'solo');
+    // Modo transmisión seguro: oculta montos de monedas y precios (menos señal "marketing de pago")
+    this.safe = params.has('safe');
+    window.STREAM_SAFE = this.safe;
+    if (this.safe) { const vh = document.getElementById('voteHint'); if (vh) vh.textContent = '💬 Comenta tu país para apoyarlo'; }
     this.bob = 0; this.snap = null; this._prevPh = null; this._lastState = 0;
     this.phase = 'VOTING';
     this.round = 1;
@@ -227,7 +231,7 @@ class Game {
       el.innerHTML = `<div class="cand-flag" style="font-size:${flagSize}px">${cand.c.flag}</div>
         <div class="cand-name">${cand.c.name}</div>
         <div class="cand-wins">🏆 ${wins}</div>
-        <div class="cand-gift">${vg.icon} +${VOTE_GIFT_POINTS}</div>
+        <div class="cand-gift">${vg.icon}${this.safe ? '' : ' +' + VOTE_GIFT_POINTS}</div>
         <div class="cand-votes">${cand.votes} pts</div>`;
       el.title = `Envía ${vg.name} para votar por ${cand.c.name}`;
       el.onclick = () => this.vote(i, VOTE_GIFT_POINTS);   // simula su regalo (+10)
@@ -368,7 +372,7 @@ class Game {
     this.dom.topGifters.innerHTML =
       '<div class="lb-title">🎁 TOP REGALOS</div>' +
       (rows.length ? rows.map((r, i) =>
-        `<div class="lb-row"><span>${medal[i]} ${r.n}</span><b>${r.c}🪙</b></div>`
+        `<div class="lb-row"><span>${medal[i]} ${r.n}</span>${this.safe ? '' : `<b>${r.c}🪙</b>`}</div>`
       ).join('') : '<div class="lb-empty">Envía regalos…</div>');
   }
 
@@ -754,7 +758,7 @@ class Game {
       el.innerHTML = `<div class="cand-flag" style="font-size:${fs}px">${country.flag}</div>
         <div class="cand-name">${country.name}</div>
         <div class="cand-wins">🏆 ${c[2]}</div>
-        <div class="cand-gift">${vg.icon} +${VOTE_GIFT_POINTS}</div>
+        <div class="cand-gift">${vg.icon}${this.safe ? '' : ' +' + VOTE_GIFT_POINTS}</div>
         <div class="cand-votes">${c[1]} pts</div>`;
       this.dom.candidates.appendChild(el);
     });
@@ -764,7 +768,7 @@ class Game {
     const medal = ['🥇', '🥈', '🥉'];
     if (this.dom.topGifters) {
       this.dom.topGifters.innerHTML = '<div class="lb-title">🎁 TOP REGALOS</div>' +
-        (gf.length ? gf.map((r, i) => `<div class="lb-row"><span>${medal[i]} ${r[0]}</span><b>${r[1]}🪙</b></div>`).join('') : '<div class="lb-empty">Envía regalos…</div>');
+        (gf.length ? gf.map((r, i) => `<div class="lb-row"><span>${medal[i]} ${r[0]}</span>${this.safe ? '' : `<b>${r[1]}🪙</b>`}</div>`).join('') : '<div class="lb-empty">Envía regalos…</div>');
     }
     if (this.dom.topCountries) {
       this.dom.topCountries.innerHTML = '<div class="lb-title">🏆 TOP PAÍSES</div>' +
