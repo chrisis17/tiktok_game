@@ -33,6 +33,13 @@ const GAME_CONFIG = {
 //  coin      = costo aproximado del regalo en monedas TikTok
 // ------------------------------------------------------------
 const UNIT_TYPES = {
+  aldeano: {
+    id: 'aldeano', name: 'Aldeano', icon: '🧑‍🌾',
+    hp: 22, damage: 3, range: 18, speed: 44, attackCD: 0.9,
+    ranged: false, splash: 0, armor: 0,
+    count: 1, power: 0.2, tier: 1, size: 11, color: '#9aa06a',
+    gift: 'Comentario 💬', coin: 0, desc: 'Débil: aparece con cada comentario (≈5x más débil que el soldado).',
+  },
   soldado: {
     id: 'soldado', name: 'Soldado', icon: '⚔️',
     hp: 110, damage: 13, range: 20, speed: 46, attackCD: 0.8,
@@ -125,7 +132,7 @@ const UNIT_TYPES = {
 const UNIT_ORDER = [
   'soldado', 'arquero', 'lancero', 'escudero', 'sanador',
   'caballeria', 'ballestero', 'mago', 'berserker', 'gigante',
-  'leon', 'dragon',
+  'leon', 'dragon', 'aldeano',
 ];
 
 // Mapa de teclas: e.code -> indice en UNIT_ORDER

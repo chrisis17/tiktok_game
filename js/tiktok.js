@@ -63,7 +63,7 @@
     } else if (m.type === 'like') {
       game.addLikes(m.count || 1);
     } else if (m.type === 'chat') {
-      game.addVoteByComment(m.comment || '');
+      game.onComment(m.comment || '', '@' + (m.user || 'anon'));
     }
   }
 

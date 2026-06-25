@@ -214,6 +214,22 @@ class Game {
     return false;
   }
 
+  // Un comentario: en votación suma voto; en reclutamiento/batalla aparece un Aldeano (débil)
+  onComment(text, user) {
+    if (this.phase === 'VOTING') return this.addVoteByComment(text);
+    if (this.phase !== 'RECRUIT' && this.phase !== 'BATTLE') return false;
+    const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const toks = norm(text || '').split(/[^a-z]+/).filter(Boolean);
+    let team = null;
+    if (this.world.countryA && toks.includes(norm(this.world.countryA.name))) team = 'A';
+    else if (this.world.countryB && toks.includes(norm(this.world.countryB.name))) team = 'B';
+    if (!team) { const s = this.world.getStats(); team = s.aliveA <= s.aliveB ? 'A' : 'B'; }
+    if (this.world.countTeam(team) >= this.settings.maxPerTeam) return false;
+    const u = this._spawnOne(team, 'aldeano');
+    if (u) { u.gifter = user || '💬'; u.nameT = 6; }
+    return true;
+  }
+
   renderCandidates() {
     // Tamaño dinámico para que quepan hasta 8+ países sin salirse
     const n = this.candidates.length;
@@ -477,7 +493,7 @@ class Game {
     const c = document.getElementById('hostComment');
     if (c) c.addEventListener('keydown', e => {
       if (e.key !== 'Enter') return;
-      const ok = this.addVoteByComment(c.value);
+      const ok = this.onComment(c.value, this.hostUser() || '💬');
       c.style.borderColor = ok ? '#2e9e5b' : '#a14458';
       setTimeout(() => { c.style.borderColor = ''; }, 600);
       c.value = '';
